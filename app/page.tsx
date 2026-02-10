@@ -319,11 +319,28 @@ export default function Home() {
     );
   }
 
+  // 🔥 [পরিবর্তন ১] লগইন পেজে ভিডিও যোগ করা হয়েছে (যাতে নতুনরা দেখে শিখতে পারে)
   if (!user) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
-      <div className="text-center p-10 bg-slate-800 rounded-3xl shadow-2xl border border-slate-700">
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4">
+      <div className="text-center w-full max-w-lg bg-slate-800 p-8 rounded-3xl shadow-2xl border border-slate-700">
         <h1 className="text-4xl font-black mb-2 text-blue-500">Smart PBI</h1>
-        <button onClick={() => signInWithPopup(auth, new GoogleAuthProvider())} className="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-full font-bold transition shadow-lg flex items-center gap-2 mx-auto">Login with Google</button>
+        <p className="text-slate-400 mb-6 text-sm">তদন্ত কর্মকর্তাদের জন্য স্মার্ট ড্রাফটিং সলিউশন</p>
+        
+        {/* ভিডিও প্লেয়ার */}
+        <div className="aspect-video w-full bg-black rounded-xl overflow-hidden shadow-lg mb-8 border border-slate-600">
+            <iframe 
+                className="w-full h-full" 
+                src={DEMO_VIDEO_URL} 
+                title="Demo Video"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowFullScreen
+            ></iframe>
+        </div>
+
+        <button onClick={() => signInWithPopup(auth, new GoogleAuthProvider())} className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-full font-bold transition shadow-lg flex items-center justify-center gap-2">
+           <span className="bg-white text-blue-600 p-1 rounded-full text-xs font-black">G</span> 
+           Login with Google
+        </button>
       </div>
     </div>
   );
@@ -333,20 +350,28 @@ export default function Home() {
       <nav className="bg-white shadow px-6 py-4 flex justify-between items-center sticky top-0 z-40">
         <div className="font-black text-2xl text-blue-900 italic">Smart<span className="text-blue-500">PBI</span></div>
         <div className="flex gap-4 items-center">
+            {/* 🔥 [পরিবর্তন ২] মেনুবারে ভিডিও বাটন যোগ করা হয়েছে */}
+           <button 
+                onClick={() => window.open(DEMO_VIDEO_URL, "_blank")} 
+                className="hidden md:flex items-center gap-2 text-sm font-bold bg-red-50 text-red-600 px-4 py-2 rounded-full border border-red-100 hover:bg-red-100 transition shadow-sm"
+            >
+                <span className="animate-pulse">▶</span> টিউটোরিয়াল
+            </button>
+
           <button onClick={() => setShowRechargeModal(true)} className={`px-4 py-1 rounded-full text-sm font-bold border shadow-sm transition hover:scale-105 ${userData?.balance < 50 ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-green-100 text-green-800'}`}>
-             ৳ {userData?.balance || 0} +
+              ৳ {userData?.balance || 0} +
           </button>
           
           <button onClick={() => setShowContactModal(true)} className="text-sm font-bold bg-blue-100 text-blue-700 px-4 py-2 rounded-full hover:bg-blue-200 transition flex items-center gap-1">
-             📞 যোগাযোগ
+              📞 যোগাযোগ
           </button>
 
           <button onClick={() => setShowFeedbackModal(true)} className="text-sm font-bold bg-purple-100 text-purple-700 px-4 py-2 rounded-full hover:bg-purple-200 transition">
-             📢 মতামত
+              📢 মতামত
           </button>
 
           <button onClick={() => setShowProfile(!showProfile)} className="text-sm font-bold bg-slate-100 px-4 py-2 rounded-full hover:bg-slate-200">
-             ⚙️ প্রোফাইল
+              ⚙️ প্রোফাইল
           </button>
           <button onClick={() => signOut(auth)} className="text-red-500 font-bold text-sm">Logout</button>
         </div>
@@ -410,7 +435,7 @@ export default function Home() {
                 <a href="https://wa.me/8801776624515" target="_blank" className="bg-green-100 p-4 rounded-xl border border-green-200 flex items-center gap-3 hover:bg-green-200 transition cursor-pointer">
                     <span className="text-2xl">💬</span>
                     <div>
-                        <p className="text-xs text-green-700 font-bold">হোয়াটসঅ্যাপ</p>
+                        <p className="text-xs text-green-700 font-bold">হোয়াটসঅ্যাপ</p>
                         <p className="font-bold text-green-900">মেসেজ দিন</p>
                     </div>
                 </a>
@@ -425,7 +450,7 @@ export default function Home() {
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden relative p-6 animate-in zoom-in duration-300">
              <button onClick={() => setShowFeedbackModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
              <h2 className="text-2xl font-black text-slate-800 mb-2">মতামত জানান</h2>
-             <p className="text-sm text-slate-500 mb-4">সফটওয়্যার নিয়ে কোনো সমস্যা বা পরামর্শ থাকলে লিখুন।</p>
+             <p className="text-sm text-slate-500 mb-4">সফটওয়্যার নিয়ে কোনো সমস্যা বা পরামর্শ থাকলে লিখুন।</p>
              <textarea value={feedbackMessage} onChange={e => setFeedbackMessage(e.target.value)} className="w-full h-32 border p-3 rounded-xl mb-4 focus:ring-2 ring-purple-500 outline-none resize-none bg-slate-50" placeholder="আপনার মতামত এখানে লিখুন..."></textarea>
              <button onClick={submitFeedback} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-bold shadow-lg transition">জমা দিন</button>
           </div>
@@ -448,7 +473,7 @@ export default function Home() {
               <button onClick={submitPayment} disabled={submittingTrx} className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold shadow-lg transition">{submittingTrx ? "পাঠানো হচ্ছে..." : "পেমেন্ট ভেরিফাই করুন"}</button>
               <div className="mt-4 pt-4 border-t text-center">
                  <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-inner mx-auto w-40"><iframe className="w-full h-full" src={DEMO_VIDEO_URL}></iframe></div>
-                 <a href="https://wa.me/8801776624515" target="_blank" className="block mt-4 text-sm text-blue-600 font-bold hover:underline">💬 হোয়াটসঅ্যাপে হেল্প নিন</a>
+                 <a href="https://wa.me/8801776624515" target="_blank" className="block mt-4 text-sm text-blue-600 font-bold hover:underline">💬 হোয়াটসঅ্যাপে হেল্প নিন</a>
               </div>
             </div>
           </div>
@@ -474,7 +499,7 @@ export default function Home() {
             {adminSubTab === "system" ? (
                 <div className="bg-red-50 p-8 rounded-2xl border border-red-200">
                     <h3 className="text-xl font-black text-red-700 mb-4">⚠️ মেইনটেন্যান্স মোড (Maintenance Mode)</h3>
-                    <p className="text-sm text-red-500 mb-6">সতর্কতা: এটি চালু করলে আপনি ছাড়া অন্য কোনো ইউজার অ্যাপে ঢুকতে পারবে না।</p>
+                    <p className="text-sm text-red-500 mb-6">সতর্কতা: এটি চালু করলে আপনি ছাড়া অন্য কোনো ইউজার অ্যাপে ঢুকতে পারবে না।</p>
                     
                     <div className="flex items-center gap-4 mb-6">
                         <span className="font-bold text-slate-700">স্ট্যাটাস:</span>
@@ -482,7 +507,7 @@ export default function Home() {
                             onClick={() => setSystemSettings({...systemSettings, maintenanceMode: !systemSettings.maintenanceMode})}
                             className={`px-6 py-2 rounded-full font-bold transition ${systemSettings.maintenanceMode ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}
                         >
-                            {systemSettings.maintenanceMode ? "🔴 সফটওয়্যার বন্ধ (ON)" : "🟢 সফটওয়্যার চালু (OFF)"}
+                            {systemSettings.maintenanceMode ? "🔴 সফটওয়্যার বন্ধ (ON)" : "🟢 সফটওয়্যার চালু (OFF)"}
                         </button>
                     </div>
 
@@ -570,7 +595,7 @@ export default function Home() {
                       ) : (
                         <div className="h-[600px] flex flex-col items-center justify-center bg-blue-50 rounded-3xl border-2 border-dashed border-blue-200 p-10 text-center">
                             <h3 className="text-2xl font-black text-slate-700 mb-2">১৬১ জবানবন্দি প্রস্তুত করুন</h3>
-                            <p className="text-slate-500 mb-8 max-w-md">আপনার রিপোর্টের তথ্যের ভিত্তিতে স্বয়ংক্রিয়ভাবে ১৬১ ধারায় জবানবন্দি তৈরি করতে নিচের বাটনে ক্লিক করুন।</p>
+                            <p className="text-slate-500 mb-8 max-w-md">আপনার রিপোর্টের তথ্যের ভিত্তিতে স্বয়ংক্রিয়ভাবে ১৬১ ধারায় জবানবন্দি তৈরি করতে নিচের বাটনে ক্লিক করুন।</p>
                             <button onClick={handleGenerate161} disabled={loading161} className="bg-purple-600 hover:bg-purple-700 text-white px-10 py-4 rounded-2xl font-bold text-lg shadow-xl transition transform hover:scale-105 active:scale-95 flex items-center gap-2">{loading161 ? "তৈরি হচ্ছে..." : `⚡ ১৬১ তৈরি করুন (৳${COST_161})`}</button>
                         </div>
                       )
