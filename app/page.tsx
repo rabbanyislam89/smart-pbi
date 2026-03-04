@@ -5,11 +5,9 @@ import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from
 import { collection, addDoc, query, where, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import dynamic from 'next/dynamic';
 
-// ReactQuill ইমপোর্ট (SSR false রাখা হয়েছে)
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 import 'react-quill-new/dist/quill.snow.css';
 
-// কনফিগুরেশন
 const ADMIN_EMAIL = "rabbanyislam89@gmail.com"; 
 const DEMO_VIDEO_URL = "https://www.youtube.com/embed/dQw4w9WgXcQ"; 
 const COST_REPORT = 49; 
@@ -21,11 +19,9 @@ export default function Home() {
   const [userData, setUserData] = useState<any>(null); 
   const [allUsers, setAllUsers] = useState<any[]>([]);
   
-  // 🔥 স্টেট: সিস্টেম কন্ট্রোল ও যোগাযোগ
   const [systemSettings, setSystemSettings] = useState({ maintenanceMode: false, message: "সার্ভারের উন্নয়নের কাজ চলছে, দয়া করে কিছুক্ষণ অপেক্ষা করুন।" });
   const [showContactModal, setShowContactModal] = useState(false);
 
-  // ফিডব্যাক এবং এডমিন ভিউ
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
@@ -37,6 +33,8 @@ export default function Home() {
 
   const [file, setFile] = useState<any>(null);
   const [note, setNote] = useState("");
+  const [note161, setNote161] = useState(""); 
+
   const [loadingReport, setLoadingReport] = useState(false);
   const [loading161, setLoading161] = useState(false);
   
@@ -59,7 +57,6 @@ export default function Home() {
     ],
   }), []);
 
-  // ইউজার ডাটা এবং সিস্টেম সেটিংস লোড
   useEffect(() => {
     loadSystemSettings();
 
@@ -207,23 +204,60 @@ export default function Home() {
     const isAdmin = userData?.role === 'admin';
     if (!isAdmin && currentBalance < COST_REPORT) { setShowRechargeModal(true); return; }
     if (!file) return alert("দয়া করে একটি PDF ফাইল আপলোড দিন!");
+    
     setLoadingReport(true); setReport(""); setStatement(""); setResultView("report");
     const formData = new FormData();
     formData.append("file", file);
     formData.append("note", note);
+    
     try {
       const res = await fetch("/api/generate", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
-      if (data.report) {
-        let finalReport = data.report;
+      
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let done = false;
+      let finalReport = "";
+
+      if (reader) {
+        while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+          if (value) {
+            const chunkValue = decoder.decode(value, { stream: true });
+            finalReport += chunkValue;
+            setReport(finalReport); 
+          }
+        }
+      }
+
+      if (finalReport) {
         if (!finalReport.includes(profile.name)) {
-             finalReport += `<br/><br/><div style="text-align:right;">----------------<br/>${profile.name}<br/>${profile.rank}<br/>বিপি: ${profile.bp}<br/>${profile.unit}</div>`;
+              finalReport += `<br/><br/><div style="text-align:right;">----------------<br/>${profile.name}<br/>${profile.rank}<br/>বিপি: ${profile.bp}<br/>${profile.unit}</div>`;
         }
         setReport(finalReport);
+        
         if (user) {
+          // 🔥 আপডেট ১: মামলা নম্বর বের করে অটো নেম তৈরি
+          let extractedFileName = file.name;
+          const match = finalReport.match(/(?:পিটিশন\s*)?মামলা\s*নং[-\s]*[০-৯0-9]+/i);
+          if (match && match[0]) {
+              extractedFileName = match[0];
+          } else {
+              const dateStr = new Date().toLocaleDateString('bn-BD');
+              extractedFileName = `অজ্ঞাত মামলা - ${dateStr}`;
+          }
+
+          // 🔥 আপডেট ২: ২০টার বেশি রেকর্ড থাকলে পুরনোটা ডিলিট করা
+          if (history.length >= 20) {
+              const itemsToDelete = history.slice(19); 
+              for (let oldItem of itemsToDelete) {
+                  await deleteDoc(doc(db, "reports", oldItem.id));
+              }
+          }
+
           const docRef = await addDoc(collection(db, "reports"), {
-            userId: user.uid, note, report: finalReport, fileName: file.name, createdAt: new Date()
+            userId: user.uid, note, report: finalReport, fileName: extractedFileName, createdAt: new Date()
           });
           setCurrentDocId(docRef.id); 
           loadHistory(user.uid);
@@ -233,8 +267,13 @@ export default function Home() {
             setUserData({ ...userData, balance: newBalance });
           }
         }
-      } else { alert("রিপোর্ট জেনারেট হয়নি।"); }
-    } catch (e:any) { console.error(e); alert("সমস্যা হয়েছে: " + e.message); }
+      } else { 
+        alert("রিপোর্ট জেনারেট হয়নি।"); 
+      }
+    } catch (e:any) { 
+      console.error(e); 
+      alert("সমস্যা হয়েছে: " + e.message); 
+    }
     setLoadingReport(false);
   };
 
@@ -248,7 +287,7 @@ export default function Home() {
       const cleanText = report.replace(/<[^>]+>/g, ''); 
       const res = await fetch("/api/generate-161", { 
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ report: cleanText }) 
+        body: JSON.stringify({ report: cleanText, note: note161 }) 
       });
       const data = await res.json();
       if (data.statement) {
@@ -302,7 +341,6 @@ export default function Home() {
     setCurrentDocId(item.id); setActiveTab("new"); setResultView("report"); 
   };
 
-  // 🛑 মেইনটেন্যান্স মোড চেক
   if (user && systemSettings.maintenanceMode && userData?.role !== 'admin') {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-slate-100 text-center p-6">
@@ -319,14 +357,12 @@ export default function Home() {
     );
   }
 
-  // 🔥 [পরিবর্তন ১] লগইন পেজে ভিডিও যোগ করা হয়েছে (যাতে নতুনরা দেখে শিখতে পারে)
   if (!user) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-4">
       <div className="text-center w-full max-w-lg bg-slate-800 p-8 rounded-3xl shadow-2xl border border-slate-700">
         <h1 className="text-4xl font-black mb-2 text-blue-500">Smart PBI</h1>
         <p className="text-slate-400 mb-6 text-sm">তদন্ত কর্মকর্তাদের জন্য স্মার্ট ড্রাফটিং সলিউশন</p>
         
-        {/* ভিডিও প্লেয়ার */}
         <div className="aspect-video w-full bg-black rounded-xl overflow-hidden shadow-lg mb-8 border border-slate-600">
             <iframe 
                 className="w-full h-full" 
@@ -350,7 +386,6 @@ export default function Home() {
       <nav className="bg-white shadow px-6 py-4 flex justify-between items-center sticky top-0 z-40">
         <div className="font-black text-2xl text-blue-900 italic">Smart<span className="text-blue-500">PBI</span></div>
         <div className="flex gap-4 items-center">
-            {/* 🔥 [পরিবর্তন ২] মেনুবারে ভিডিও বাটন যোগ করা হয়েছে */}
            <button 
                 onClick={() => window.open(DEMO_VIDEO_URL, "_blank")} 
                 className="hidden md:flex items-center gap-2 text-sm font-bold bg-red-50 text-red-600 px-4 py-2 rounded-full border border-red-100 hover:bg-red-100 transition shadow-sm"
@@ -377,9 +412,7 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* 🔥 নতুন: প্রফেশনাল স্ক্রোলিং নোটিশ */}
       <div className="bg-red-50 border-b border-red-100 overflow-hidden py-2 relative">
-        {/* CSS Animation Style */}
         <style jsx>{`
           @keyframes scroll {
             0% { transform: translateX(100%); }
@@ -399,7 +432,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* প্রোফাইল প্যানেল */}
       {showProfile && (
         <div className="bg-white p-6 border-b shadow-inner flex flex-wrap gap-4 justify-center animate-in slide-in-from-top duration-300">
           <input placeholder="নাম" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="border p-2 rounded-xl text-sm w-40"/>
@@ -410,7 +442,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* যোগাযোগ মোডাল */}
       {showContactModal && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
            <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden relative p-8 text-center animate-in zoom-in duration-300">
@@ -444,7 +475,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* ফিডব্যাক মোডাল */}
       {showFeedbackModal && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden relative p-6 animate-in zoom-in duration-300">
@@ -457,7 +487,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* রিচার্জ মোডাল */}
       {showRechargeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden relative">
@@ -489,7 +518,6 @@ export default function Home() {
 
         {activeTab === "admin" && userData?.role === 'admin' ? (
           <div className="bg-white p-8 rounded-3xl shadow-xl border">
-            {/* এডমিন সাব-ট্যাব */}
             <div className="flex gap-4 mb-6 border-b pb-2">
                 <button onClick={() => setAdminSubTab("users")} className={`font-bold ${adminSubTab==='users' ? 'text-blue-600' : 'text-gray-400'}`}>👥 ইউজার</button>
                 <button onClick={() => setAdminSubTab("feedbacks")} className={`font-bold ${adminSubTab==='feedbacks' ? 'text-purple-600' : 'text-gray-400'}`}>💬 ফিডব্যাক</button>
@@ -499,7 +527,7 @@ export default function Home() {
             {adminSubTab === "system" ? (
                 <div className="bg-red-50 p-8 rounded-2xl border border-red-200">
                     <h3 className="text-xl font-black text-red-700 mb-4">⚠️ মেইনটেন্যান্স মোড (Maintenance Mode)</h3>
-                    <p className="text-sm text-red-500 mb-6">সতর্কতা: এটি চালু করলে আপনি ছাড়া অন্য কোনো ইউজার অ্যাপে ঢুকতে পারবে না।</p>
+                    <p className="text-sm text-red-500 mb-6">সতর্কতা: এটি চালু করলে আপনি ছাড়া অন্য কোনো ইউজার অ্যাপে ঢুকতে পারবে লাল।</p>
                     
                     <div className="flex items-center gap-4 mb-6">
                         <span className="font-bold text-slate-700">স্ট্যাটাস:</span>
@@ -595,7 +623,14 @@ export default function Home() {
                       ) : (
                         <div className="h-[600px] flex flex-col items-center justify-center bg-blue-50 rounded-3xl border-2 border-dashed border-blue-200 p-10 text-center">
                             <h3 className="text-2xl font-black text-slate-700 mb-2">১৬১ জবানবন্দি প্রস্তুত করুন</h3>
-                            <p className="text-slate-500 mb-8 max-w-md">আপনার রিপোর্টের তথ্যের ভিত্তিতে স্বয়ংক্রিয়ভাবে ১৬১ ধারায় জবানবন্দি তৈরি করতে নিচের বাটনে ক্লিক করুন।</p>
+                            <p className="text-slate-500 mb-6 max-w-md">আপনার রিপোর্টের তথ্যের ভিত্তিতে স্বয়ংক্রিয়ভাবে ১৬১ ধারায় জবানবন্দি তৈরি করতে নিচের বাটনে ক্লিক করুন।</p>
+                            
+                            <textarea 
+                                onChange={e => setNote161(e.target.value)} 
+                                className="w-full max-w-lg border p-4 rounded-2xl h-24 mb-6 text-sm bg-white focus:ring-2 ring-purple-500 outline-none shadow-sm" 
+                                placeholder="১৬১ এর জন্য বিশেষ আইও নোট (যেমন: কোন সাক্ষীর জবানবন্দি নিতে চান, সে কী বলেছে ইত্যাদি...)"
+                            ></textarea>
+
                             <button onClick={handleGenerate161} disabled={loading161} className="bg-purple-600 hover:bg-purple-700 text-white px-10 py-4 rounded-2xl font-bold text-lg shadow-xl transition transform hover:scale-105 active:scale-95 flex items-center gap-2">{loading161 ? "তৈরি হচ্ছে..." : `⚡ ১৬১ তৈরি করুন (৳${COST_161})`}</button>
                         </div>
                       )
@@ -609,13 +644,22 @@ export default function Home() {
         ) : (
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden border">
              <table className="w-full text-left">
-               <thead className="bg-slate-50 text-slate-500 text-xs border-b"><tr><th className="p-5">ফাইল</th><th className="p-5">তারিখ</th><th className="p-5 text-right">অ্যাকশন</th></tr></thead>
+               {/* 🔥 আপডেট ৩: টেবিলে নতুন 'নং' কলাম যুক্ত করা হয়েছে */}
+               <thead className="bg-slate-50 text-slate-500 text-xs border-b">
+                 <tr>
+                   <th className="p-5 w-16">নং</th>
+                   <th className="p-5">ফাইল</th>
+                   <th className="p-5">তারিখ</th>
+                   <th className="p-5 text-right">অ্যাকশন</th>
+                 </tr>
+               </thead>
                <tbody>
-                 {history.map(h => (
+                 {history.map((h, index) => (
                    <tr key={h.id} className="border-t hover:bg-blue-50 cursor-pointer" onClick={() => viewHistoryItem(h)}>
+                     {/* 🔥 সিরিয়াল নম্বর দেখানো হচ্ছে */}
+                     <td className="p-5 font-bold text-slate-500">{index + 1}</td>
                      <td className="p-5 font-bold text-slate-800">📄 {h.fileName}</td>
                      <td className="p-5 text-slate-400 text-sm">{h.createdAt?.seconds ? new Date(h.createdAt.seconds * 1000).toLocaleDateString() : '-'}</td>
-                     {/* 🔥 Rename বাটন */}
                      <td className="p-5 text-right">
                         <button onClick={(e) => {e.stopPropagation(); renameReport(h.id, h.fileName)}} className="text-blue-500 font-bold text-sm mr-4 hover:underline">Rename</button>
                         <button onClick={(e) => {e.stopPropagation(); deleteReport(h.id)}} className="text-red-400 font-bold text-sm hover:underline">Delete</button>
