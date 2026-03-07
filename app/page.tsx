@@ -269,9 +269,8 @@ export default function Home() {
         alert("রিপোর্ট জেনারেট হয়নি।"); 
       }
     } catch (e:any) { 
-      // 🔥 ১নং পরিবর্তন: 500/503 এরর আসলে টাকা না কাটার মেসেজ
       console.error(e); 
-      alert("⚠️ এই মুহূর্তে গুগলের সার্ভারে প্রচুর ভিড় চলছে বা সাময়িক সমস্যা হয়েছে। দয়া করে ২০-৩০ সেকেন্ড অপেক্ষা করে আবার চেষ্টা করুন। আপনার কোনো টাকা কাটা হয়নি!"); 
+      alert("⚠️ এই মুহূর্তে গুগলের সার্ভারে প্রচুর ভিড় চলছে বা সাময়িক সমস্যা হয়েছে। দয়া করে ২০-৩০ সেকেন্ড অপেক্ষা করে আবার চেষ্টা করুন। আপনার কোনো টাকা কাটা হয়নি!"); 
     }
     setLoadingReport(false);
   };
@@ -288,7 +287,7 @@ export default function Home() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ report: cleanText, note: note161 }) 
       });
-      if (!res.ok) throw new Error("Failed to fetch"); // এরর ক্যাচ করার জন্য
+      if (!res.ok) throw new Error("Failed to fetch"); 
       const data = await res.json();
       if (data.statement) {
         const finalStatement = data.statement + `<br/><br/><div style="text-align:right;">----------------<br/>${profile.name}<br/>${profile.rank}</div>`;
@@ -303,9 +302,8 @@ export default function Home() {
         }
       }
     } catch (e:any) { 
-      // 🔥 ২নং পরিবর্তন: ১৬১ এর জন্য টাকা না কাটার মেসেজ
       console.error(e);
-      alert("⚠️ সার্ভারে ভিড় রয়েছে। একটু পর আবার চেষ্টা করুন। আপনার কোনো টাকা কাটা হয়নি!"); 
+      alert("⚠️ সার্ভারে ভিড় রয়েছে। একটু পর আবার চেষ্টা করুন। আপনার কোনো টাকা কাটা হয়নি!"); 
     }
     setLoading161(false);
   };
@@ -316,8 +314,8 @@ export default function Home() {
     pw?.document.close();
   };
 
-  const downloadWordDocument = (htmlContent) => {
-    // 🔥 ৩নং পরিবর্তন: ReactQuill থেকে আসা ফালতু span ট্যাগ (যা বাক্স তৈরি করে) মুছে দেওয়া হলো
+  // 🔥 UPDATE: এখানে parameter এ ': any' যোগ করা হয়েছে টাইপস্ক্রিপ্ট এরর সমাধানের জন্য
+  const downloadWordDocument = (htmlContent: any) => {
     let cleanHtml = htmlContent
       .replace(/&nbsp;/gi, ' ')
       .replace(/[\u200B\u200C\u200D\uFEFF\u00AD\r\n]/g, '')
@@ -325,7 +323,7 @@ export default function Home() {
       .replace(/<\/strong>/gi, '</b>')
       .replace(/<b\s+[^>]*>/gi, '<b>')
       .replace(/<p\s+[^>]*>/gi, '<p>')
-      .replace(/<\/?span[^>]*>/gi, ''); // চারকোণা ঘরের আসল কালপ্রিট span ডিলিট
+      .replace(/<\/?span[^>]*>/gi, ''); 
 
     const preHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
     <head><meta charset='utf-8'><style>
@@ -349,8 +347,8 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  const copyForWord = async (htmlContent) => {
-    // 🔥 ৪নং পরিবর্তন: স্মার্ট কপি বাটনেও ফালতু span (চারকোণা ঘর) মুছে দেওয়া হলো
+  // 🔥 UPDATE: এখানেও parameter এ ': any' যোগ করা হয়েছে
+  const copyForWord = async (htmlContent: any) => {
     let cleanHtml = htmlContent
       .replace(/&nbsp;/gi, ' ')
       .replace(/[\u200B\u200C\u200D\uFEFF\u00AD\r\n]/g, '')
@@ -372,7 +370,7 @@ export default function Home() {
       const blobText = new Blob([cleanHtml.replace(/<[^>]+>/g, '\n')], { type: "text/plain" });
       const data = [new ClipboardItem({ "text/html": blobHtml, "text/plain": blobText })];
       await navigator.clipboard.write(data);
-      alert("✅ সফলভাবে কপি হয়েছে! MS Word-এ Ctrl + V দিন। কোনো চারকোনা বক্স আসবে না।");
+      alert("✅ সফলভাবে কপি হয়েছে! MS Word-এ Ctrl + V দিন। কোনো চারকোনা বক্স আসবে না।");
     } catch (e) {
       const tempDiv = document.createElement("div");
       tempDiv.innerHTML = cleanHtml;
