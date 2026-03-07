@@ -238,7 +238,6 @@ export default function Home() {
         setReport(finalReport);
         
         if (user) {
-          // 🔥 আপডেট ১: মামলা নম্বর বের করে অটো নেম তৈরি
           let extractedFileName = file.name;
           const match = finalReport.match(/(?:পিটিশন\s*)?মামলা\s*নং[-\s]*[০-৯0-9]+/i);
           if (match && match[0]) {
@@ -248,7 +247,6 @@ export default function Home() {
               extractedFileName = `অজ্ঞাত মামলা - ${dateStr}`;
           }
 
-          // 🔥 আপডেট ২: ২০টার বেশি রেকর্ড থাকলে পুরনোটা ডিলিট করা
           if (history.length >= 20) {
               const itemsToDelete = history.slice(19); 
               for (let oldItem of itemsToDelete) {
@@ -271,8 +269,9 @@ export default function Home() {
         alert("রিপোর্ট জেনারেট হয়নি।"); 
       }
     } catch (e:any) { 
+      // 🔥 ১নং পরিবর্তন: 500/503 এরর আসলে টাকা না কাটার মেসেজ
       console.error(e); 
-      alert("সমস্যা হয়েছে: " + e.message); 
+      alert("⚠️ এই মুহূর্তে গুগলের সার্ভারে প্রচুর ভিড় চলছে বা সাময়িক সমস্যা হয়েছে। দয়া করে ২০-৩০ সেকেন্ড অপেক্ষা করে আবার চেষ্টা করুন। আপনার কোনো টাকা কাটা হয়নি!"); 
     }
     setLoadingReport(false);
   };
@@ -289,6 +288,7 @@ export default function Home() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ report: cleanText, note: note161 }) 
       });
+      if (!res.ok) throw new Error("Failed to fetch"); // এরর ক্যাচ করার জন্য
       const data = await res.json();
       if (data.statement) {
         const finalStatement = data.statement + `<br/><br/><div style="text-align:right;">----------------<br/>${profile.name}<br/>${profile.rank}</div>`;
@@ -302,7 +302,11 @@ export default function Home() {
             }
         }
       }
-    } catch (e:any) { alert("Error generating 161"); }
+    } catch (e:any) { 
+      // 🔥 ২নং পরিবর্তন: ১৬১ এর জন্য টাকা না কাটার মেসেজ
+      console.error(e);
+      alert("⚠️ সার্ভারে ভিড় রয়েছে। একটু পর আবার চেষ্টা করুন। আপনার কোনো টাকা কাটা হয়নি!"); 
+    }
     setLoading161(false);
   };
 
@@ -312,28 +316,87 @@ export default function Home() {
     pw?.document.close();
   };
 
-  const copyToClipboard = (htmlContent: string) => {
-    try {
-      const blobHtml = new Blob([htmlContent], { type: 'text/html' });
-      const blobText = new Blob([htmlContent.replace(/<[^>]+>/g, '\n')], { type: 'text/plain' });
-      const data = [new ClipboardItem({ 'text/html': blobHtml, 'text/plain': blobText })];
-      navigator.clipboard.write(data).then(() => { alert("কপি সফল! এবার ওয়ার্ড ফাইলে পেস্ট করুন।"); }).catch((err) => { fallbackCopy(htmlContent); });
-    } catch (e) { fallbackCopy(htmlContent); }
+  const downloadWordDocument = (htmlContent) => {
+    // 🔥 ৩নং পরিবর্তন: ReactQuill থেকে আসা ফালতু span ট্যাগ (যা বাক্স তৈরি করে) মুছে দেওয়া হলো
+    let cleanHtml = htmlContent
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/[\u200B\u200C\u200D\uFEFF\u00AD\r\n]/g, '')
+      .replace(/<strong[^>]*>/gi, '<b>')
+      .replace(/<\/strong>/gi, '</b>')
+      .replace(/<b\s+[^>]*>/gi, '<b>')
+      .replace(/<p\s+[^>]*>/gi, '<p>')
+      .replace(/<\/?span[^>]*>/gi, ''); // চারকোণা ঘরের আসল কালপ্রিট span ডিলিট
+
+    const preHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset='utf-8'><style>
+      body { font-family: 'Vrinda', 'Kalpurush', 'Arial', sans-serif; font-size: 14pt; } 
+      p { text-align: justify; margin: 0 0 10px 0; line-height: 1.5; } 
+      table { border-collapse: collapse; width: 100%; margin-top: 10px; margin-bottom: 10px; } 
+      td, th { border: 1px solid black; padding: 8px; text-align: left; }
+    </style></head><body>`;
+    const postHtml = "</body></html>";
+    const finalHtml = preHtml + cleanHtml + postHtml;
+
+    const blob = new Blob(['\ufeff', finalHtml], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'PBI_Report.doc'; 
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
-  const fallbackCopy = (htmlContent: string) => {
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = htmlContent;
-    tempDiv.style.position = "fixed";
-    tempDiv.style.left = "-9999px"; 
-    document.body.appendChild(tempDiv);
-    const range = document.createRange();
-    range.selectNodeContents(tempDiv);
-    const selection = window.getSelection();
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-    try { document.execCommand("copy"); alert("কপি হয়েছে! ওয়ার্ডে পেস্ট করুন।"); } catch (err) { alert("কপি করা যায়নি।"); }
-    document.body.removeChild(tempDiv);
+  const copyForWord = async (htmlContent) => {
+    // 🔥 ৪নং পরিবর্তন: স্মার্ট কপি বাটনেও ফালতু span (চারকোণা ঘর) মুছে দেওয়া হলো
+    let cleanHtml = htmlContent
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/[\u200B\u200C\u200D\uFEFF\u00AD\r\n]/g, '')
+      .replace(/<strong[^>]*>/gi, '<b>')
+      .replace(/<\/strong>/gi, '</b>')
+      .replace(/<b\s+[^>]*>/gi, '<b>')
+      .replace(/<p\s+[^>]*>/gi, '<p>')
+      .replace(/<\/?span[^>]*>/gi, '');
+
+    const wordHtml = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="utf-8"></head>
+      <body>${cleanHtml}</body>
+      </html>
+    `;
+
+    try {
+      const blobHtml = new Blob([wordHtml], { type: "text/html" });
+      const blobText = new Blob([cleanHtml.replace(/<[^>]+>/g, '\n')], { type: "text/plain" });
+      const data = [new ClipboardItem({ "text/html": blobHtml, "text/plain": blobText })];
+      await navigator.clipboard.write(data);
+      alert("✅ সফলভাবে কপি হয়েছে! MS Word-এ Ctrl + V দিন। কোনো চারকোনা বক্স আসবে না।");
+    } catch (e) {
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = cleanHtml;
+      tempDiv.style.position = "fixed";
+      tempDiv.style.left = "-9999px"; 
+      
+      document.body.appendChild(tempDiv);
+      
+      const range = document.createRange();
+      range.selectNodeContents(tempDiv);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      
+      try { 
+          document.execCommand("copy"); 
+          alert("✅ লেখা কপি হয়েছে! এবার MS Word এ গিয়ে পেস্ট করুন।"); 
+      } catch (err) { 
+          alert("কপি করা যায়নি।"); 
+      }
+      
+      document.body.removeChild(tempDiv);
+      selection?.removeAllRanges();
+    }
   };
 
   const viewHistoryItem = (item: any) => {
@@ -605,7 +668,8 @@ export default function Home() {
                {report ? (
                  <div className="animate-in fade-in duration-500">
                    <div className="flex justify-end gap-3 mb-4">
-                      <button onClick={() => copyToClipboard(resultView === 'report' ? report : statement)} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-xs font-bold shadow hover:bg-gray-200 transition">📋 Copy Formatted</button>
+                      <button onClick={() => downloadWordDocument(resultView === 'report' ? report : statement)} className="bg-blue-600 text-white px-5 py-2 rounded-full text-xs font-bold shadow-md hover:bg-blue-700 transition flex items-center gap-1">💾 Word এ ডাউনলোড করুন</button>
+                      <button onClick={() => copyForWord(resultView === 'report' ? report : statement)} className="bg-green-100 text-green-700 border border-green-200 px-4 py-2 rounded-full text-xs font-bold shadow-sm hover:bg-green-200 transition">📋 স্মার্ট কপি</button>
                       <button onClick={() => printDoc(resultView === 'report' ? report : statement)} className="bg-slate-900 text-white px-6 py-2 rounded-full text-xs font-bold shadow hover:bg-black transition">🖨️ প্রিন্ট করুন</button>
                    </div>
                    
@@ -623,7 +687,7 @@ export default function Home() {
                       ) : (
                         <div className="h-[600px] flex flex-col items-center justify-center bg-blue-50 rounded-3xl border-2 border-dashed border-blue-200 p-10 text-center">
                             <h3 className="text-2xl font-black text-slate-700 mb-2">১৬১ জবানবন্দি প্রস্তুত করুন</h3>
-                            <p className="text-slate-500 mb-6 max-w-md">আপনার রিপোর্টের তথ্যের ভিত্তিতে স্বয়ংক্রিয়ভাবে ১৬১ ধারায় জবানবন্দি তৈরি করতে নিচের বাটনে ক্লিক করুন।</p>
+                            <p className="text-slate-500 mb-6 max-w-md">আপনার রিপোর্টের তথ্যের ভিত্তিতে স্বয়ংক্রিয়ভাবে ১৬১ ধারায় জবানবন্দি তৈরি করতে নিচের বাটনে ক্লিক করুন.</p>
                             
                             <textarea 
                                 onChange={e => setNote161(e.target.value)} 
@@ -644,7 +708,6 @@ export default function Home() {
         ) : (
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden border">
              <table className="w-full text-left">
-               {/* 🔥 আপডেট ৩: টেবিলে নতুন 'নং' কলাম যুক্ত করা হয়েছে */}
                <thead className="bg-slate-50 text-slate-500 text-xs border-b">
                  <tr>
                    <th className="p-5 w-16">নং</th>
@@ -656,7 +719,6 @@ export default function Home() {
                <tbody>
                  {history.map((h, index) => (
                    <tr key={h.id} className="border-t hover:bg-blue-50 cursor-pointer" onClick={() => viewHistoryItem(h)}>
-                     {/* 🔥 সিরিয়াল নম্বর দেখানো হচ্ছে */}
                      <td className="p-5 font-bold text-slate-500">{index + 1}</td>
                      <td className="p-5 font-bold text-slate-800">📄 {h.fileName}</td>
                      <td className="p-5 text-slate-400 text-sm">{h.createdAt?.seconds ? new Date(h.createdAt.seconds * 1000).toLocaleDateString() : '-'}</td>
