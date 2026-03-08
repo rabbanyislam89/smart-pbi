@@ -328,7 +328,8 @@ export default function Home() {
     pw?.document.close();
   };
 
-  const downloadWordDocument = (htmlContent) => {
+  // 🔥 Type error fixed here (Added : string)
+  const downloadWordDocument = (htmlContent: string) => {
     let cleanHtml = htmlContent
       .replace(/&nbsp;/gi, ' ')
       .replace(/[\u200B\u200C\u200D\uFEFF\u00AD\r\n]/g, '')
@@ -360,7 +361,8 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  const copyForWord = async (htmlContent) => {
+  // 🔥 Type error fixed here (Added : string)
+  const copyForWord = async (htmlContent: string) => {
     let cleanHtml = htmlContent
       .replace(/&nbsp;/gi, ' ')
       .replace(/[\u200B\u200C\u200D\uFEFF\u00AD\r\n]/g, '')
