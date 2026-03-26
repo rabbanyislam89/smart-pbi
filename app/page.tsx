@@ -11,7 +11,6 @@ import 'react-quill-new/dist/quill.snow.css';
 const ADMIN_EMAIL = "rabbanyislam89@gmail.com"; 
 const DEMO_VIDEO_URL = "https://www.youtube.com/embed/dQw4w9WgXcQ"; 
 const COST_REPORT = 49; 
-const COST_161 = 1;     
 const SIGNUP_BONUS = 150; 
 
 export default function Home() {
@@ -33,20 +32,14 @@ export default function Home() {
 
   const [file, setFile] = useState<any>(null);
   const [note, setNote] = useState("");
-  const [note161, setNote161] = useState(""); 
   
-  // 🔥 নতুন স্টেট: ১৬১ এর সোর্স এবং পেস্ট করা টেক্সট সেভ করার জন্য
-  const [sourceType, setSourceType] = useState("auto"); 
-  const [pastedReportText, setPastedReportText] = useState("");
+  const [sourceType, setSourceType] = useState("paste"); 
 
   const [loadingReport, setLoadingReport] = useState(false);
-  const [loading161, setLoading161] = useState(false);
   
   const [report, setReport] = useState("");       
-  const [statement, setStatement] = useState(""); 
   const [history, setHistory] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("new");     
-  const [resultView, setResultView] = useState("report"); 
   const [currentDocId, setCurrentDocId] = useState<string | null>(null);
   const [trxId, setTrxId] = useState("");
   const [submittingTrx, setSubmittingTrx] = useState(false);
@@ -209,7 +202,7 @@ export default function Home() {
     if (!isAdmin && currentBalance < COST_REPORT) { setShowRechargeModal(true); return; }
     if (!file) return alert("দয়া করে একটি PDF ফাইল আপলোড দিন!");
     
-    setLoadingReport(true); setReport(""); setStatement(""); setResultView("report");
+    setLoadingReport(true); setReport(""); 
     const formData = new FormData();
     formData.append("file", file);
     formData.append("note", note);
@@ -279,57 +272,13 @@ export default function Home() {
     setLoadingReport(false);
   };
 
-  // 🔥 ১৬১ জেনারেট করার লজিক (আপডেটেড)
-  const handleGenerate161 = async () => {
-    let finalSourceText = "";
-    
-    if (sourceType === "auto") {
-      if (!report) return alert("আগে রিপোর্ট তৈরি করুন অথবা 'ফাইনাল রিপোর্ট পেস্ট করুন' অপশন বেছে নিন!");
-      finalSourceText = report.replace(/<[^>]+>/g, ''); 
-    } else {
-      if (!pastedReportText.trim()) return alert("দয়া করে আপনার ফাইনাল রিপোর্টটি টেক্সট বক্সে পেস্ট করুন!");
-      finalSourceText = pastedReportText;
-    }
-
-    const currentBalance = userData?.balance || 0;
-    const isAdmin = userData?.role === 'admin';
-    if (!isAdmin && currentBalance < COST_161) { setShowRechargeModal(true); return; }
-    
-    setLoading161(true);
-    try {
-      const res = await fetch("/api/generate-161", { 
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ report: finalSourceText, note: note161 }) 
-      });
-      if (!res.ok) throw new Error("Failed to fetch"); 
-      const data = await res.json();
-      if (data.statement) {
-        const finalStatement = data.statement + `<br/><br/><div style="text-align:right;">----------------<br/>${profile.name}<br/>${profile.rank}</div>`;
-        setStatement(finalStatement);
-        if(currentDocId && sourceType === "auto") { // শুধুমাত্র অটো হলে হিস্টোরি আপডেট
-            await updateDoc(doc(db, "reports", currentDocId), { statement161: finalStatement });
-        }
-        if (!isAdmin) {
-            const newBalance = currentBalance - COST_161;
-            await updateDoc(doc(db, "users", user.uid), { balance: newBalance });
-            setUserData({ ...userData, balance: newBalance });
-        }
-      }
-    } catch (e:any) { 
-      console.error(e);
-      alert("⚠️ সার্ভারে ভিড় রয়েছে। একটু পর আবার চেষ্টা করুন। আপনার কোনো টাকা কাটা হয়নি!"); 
-    }
-    setLoading161(false);
-  };
-
   const printDoc = (content: string) => {
     const pw = window.open('', '', 'width=900');
     pw?.document.write(`<html><head><style>@import url('https://fonts.googleapis.com/css2?family=Tiro+Bangla&display=swap'); @page { size: Legal; margin: 0; } body { font-family: 'Tiro Bangla', serif; font-size: 14px; line-height: 1.5; color: #000; padding-top: 1in; padding-bottom: 1in; padding-right: 1in; padding-left: 1.5in; } table { width: 100%; border-collapse: collapse; margin: 10px 0; } th, td { border: 1px solid black; padding: 6px; text-align: left; vertical-align: top; } @media print { -webkit-print-color-adjust: exact; print-color-adjust: exact; }</style></head><body>${content}<script>window.print();window.onafterprint = function() { window.close(); };</script></body></html>`);
     pw?.document.close();
   };
 
-  // 🔥 Type error fixed here (Added : string)
-  const downloadWordDocument = (htmlContent: string) => {
+  const downloadWordDocument = (htmlContent: any) => {
     let cleanHtml = htmlContent
       .replace(/&nbsp;/gi, ' ')
       .replace(/[\u200B\u200C\u200D\uFEFF\u00AD\r\n]/g, '')
@@ -361,8 +310,7 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
 
-  // 🔥 Type error fixed here (Added : string)
-  const copyForWord = async (htmlContent: string) => {
+  const copyForWord = async (htmlContent: any) => {
     let cleanHtml = htmlContent
       .replace(/&nbsp;/gi, ' ')
       .replace(/[\u200B\u200C\u200D\uFEFF\u00AD\r\n]/g, '')
@@ -412,8 +360,8 @@ export default function Home() {
   };
 
   const viewHistoryItem = (item: any) => {
-    setReport(item.report || ""); setStatement(item.statement161 || "");
-    setCurrentDocId(item.id); setActiveTab("new"); setResultView("report"); 
+    setReport(item.report || "");
+    setCurrentDocId(item.id); setActiveTab("new");
   };
 
   if (user && systemSettings.maintenanceMode && userData?.role !== 'admin') {
@@ -461,18 +409,27 @@ export default function Home() {
       <nav className="bg-white shadow px-6 py-4 flex justify-between items-center sticky top-0 z-40">
         <div className="font-black text-2xl text-blue-900 italic">Smart<span className="text-blue-500">PBI</span></div>
         <div className="flex gap-4 items-center">
-           <button 
-                onClick={() => window.open(DEMO_VIDEO_URL, "_blank")} 
-                className="hidden md:flex items-center gap-2 text-sm font-bold bg-red-50 text-red-600 px-4 py-2 rounded-full border border-red-100 hover:bg-red-100 transition shadow-sm"
-            >
-                <span className="animate-pulse">▶</span> টিউটোরিয়াল
-            </button>
+           
+          {/* 🔥 ১৬১ পেজে যাওয়ার প্রফেশনাল ও বড় বাটন */}
+          <button 
+              onClick={() => window.location.href = '/161'} 
+              className="flex items-center gap-2 text-[15px] font-black bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-7 py-2.5 rounded-full shadow-[0_4px_15px_rgba(67,56,202,0.4)] hover:shadow-[0_6px_20px_rgba(67,56,202,0.6)] hover:-translate-y-0.5 transition-all border border-indigo-400 mr-2"
+          >
+              📝 ১৬১ জবানবন্দি
+          </button>
+
+          <button 
+              onClick={() => window.open(DEMO_VIDEO_URL, "_blank")} 
+              className="hidden md:flex items-center gap-2 text-sm font-bold bg-red-50 text-red-600 px-4 py-2 rounded-full border border-red-100 hover:bg-red-100 transition shadow-sm"
+          >
+              <span className="animate-pulse">▶</span> টিউটোরিয়াল
+          </button>
 
           <button onClick={() => setShowRechargeModal(true)} className={`px-4 py-1 rounded-full text-sm font-bold border shadow-sm transition hover:scale-105 ${userData?.balance < 50 ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-green-100 text-green-800'}`}>
               ৳ {userData?.balance || 0} +
           </button>
           
-          <button onClick={() => setShowContactModal(true)} className="text-sm font-bold bg-blue-100 text-blue-700 px-4 py-2 rounded-full hover:bg-blue-200 transition flex items-center gap-1">
+          <button onClick={() => setShowContactModal(true)} className="hidden md:flex text-sm font-bold bg-blue-100 text-blue-700 px-4 py-2 rounded-full hover:bg-blue-200 transition items-center gap-1">
               📞 যোগাযোগ
           </button>
 
@@ -555,7 +512,7 @@ export default function Home() {
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden relative p-6 animate-in zoom-in duration-300">
              <button onClick={() => setShowFeedbackModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500 font-bold text-xl">✕</button>
              <h2 className="text-2xl font-black text-slate-800 mb-2">মতামত জানান</h2>
-             <p className="text-sm text-slate-500 mb-4">সফটওয়্যার নিয়ে কোনো সমস্যা বা পরামর্শ থাকলে লিখুন।</p>
+             <p className="text-sm text-slate-500 mb-4">সফটওয়্যার নিয়ে কোনো সমস্যা বা পরামর্শ থাকলে লিখুন。</p>
              <textarea value={feedbackMessage} onChange={e => setFeedbackMessage(e.target.value)} className="w-full h-32 border p-3 rounded-xl mb-4 focus:ring-2 ring-purple-500 outline-none resize-none bg-slate-50" placeholder="আপনার মতামত এখানে লিখুন..."></textarea>
              <button onClick={submitFeedback} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-bold shadow-lg transition">জমা দিন</button>
           </div>
@@ -672,75 +629,23 @@ export default function Home() {
             </div>
 
             <div className="lg:col-span-2 bg-white p-10 rounded-3xl shadow-2xl border min-h-[600px]">
-               <div className="flex gap-6 mb-8 border-b">
-                 <button onClick={() => setResultView("report")} className={`pb-2 font-black transition ${resultView === 'report' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-slate-400'}`}>প্রতিবেদন</button>
-                 <button onClick={() => setResultView("statement")} className={`pb-2 font-black transition ${resultView === 'statement' ? 'border-b-4 border-blue-600 text-blue-600' : 'text-slate-400'}`}>১৬১ জবানবন্দি</button>
-               </div>
-               
-               {/* 🔥 নতুন কন্ডিশনাল লজিক (স্বতন্ত্র ট্যাব) */}
-               {resultView === "report" && (
-                 report ? (
-                   <div className="animate-in fade-in duration-500">
-                     <div className="flex justify-end gap-3 mb-4">
-                        <button onClick={() => downloadWordDocument(report)} className="bg-blue-600 text-white px-5 py-2 rounded-full text-xs font-bold shadow-md hover:bg-blue-700 transition flex items-center gap-1">💾 Word এ ডাউনলোড করুন</button>
-                        <button onClick={() => copyForWord(report)} className="bg-green-100 text-green-700 border border-green-200 px-4 py-2 rounded-full text-xs font-bold shadow-sm hover:bg-green-200 transition">📋 স্মার্ট কপি</button>
-                        <button onClick={() => printDoc(report)} className="bg-slate-900 text-white px-6 py-2 rounded-full text-xs font-bold shadow hover:bg-black transition">🖨️ প্রিন্ট করুন</button>
-                     </div>
-                     
-                     <div className="bg-white rounded-2xl border overflow-hidden">
-                       <ReactQuill theme="snow" value={report} onChange={setReport} modules={modules} className="h-[600px] mb-12"/>
-                     </div>
+               {report ? (
+                 <div className="animate-in fade-in duration-500">
+                   <div className="flex justify-end gap-3 mb-4">
+                      <button onClick={() => downloadWordDocument(report)} className="bg-blue-600 text-white px-5 py-2 rounded-full text-xs font-bold shadow-md hover:bg-blue-700 transition flex items-center gap-1">💾 Word এ ডাউনলোড করুন</button>
+                      <button onClick={() => copyForWord(report)} className="bg-green-100 text-green-700 border border-green-200 px-4 py-2 rounded-full text-xs font-bold shadow-sm hover:bg-green-200 transition">📋 স্মার্ট কপি</button>
+                      <button onClick={() => printDoc(report)} className="bg-slate-900 text-white px-6 py-2 rounded-full text-xs font-bold shadow hover:bg-black transition">🖨️ প্রিন্ট করুন</button>
                    </div>
-                 ) : (
-                   <div className="h-full flex flex-col items-center justify-center text-slate-300 py-32">
-                     <p className="font-bold">বাম পাশ থেকে ফাইল আপলোড দিন</p>
+                   
+                   <div className="bg-white rounded-2xl border overflow-hidden">
+                     <ReactQuill theme="snow" value={report} onChange={setReport} modules={modules} className="h-[600px] mb-12"/>
                    </div>
-                 )
+                 </div>
+               ) : (
+                 <div className="h-full flex flex-col items-center justify-center text-slate-300 py-32">
+                   <p className="font-bold">বাম পাশ থেকে ফাইল আপলোড দিন</p>
+                 </div>
                )}
-
-               {resultView === "statement" && (
-                  statement ? (
-                    <div className="animate-in fade-in duration-500">
-                      <div className="flex justify-end gap-3 mb-4">
-                         <button onClick={() => downloadWordDocument(statement)} className="bg-blue-600 text-white px-5 py-2 rounded-full text-xs font-bold shadow-md hover:bg-blue-700 transition flex items-center gap-1">💾 Word এ ডাউনলোড করুন</button>
-                         <button onClick={() => copyForWord(statement)} className="bg-green-100 text-green-700 border border-green-200 px-4 py-2 rounded-full text-xs font-bold shadow-sm hover:bg-green-200 transition">📋 স্মার্ট কপি</button>
-                         <button onClick={() => printDoc(statement)} className="bg-slate-900 text-white px-6 py-2 rounded-full text-xs font-bold shadow hover:bg-black transition">🖨️ প্রিন্ট করুন</button>
-                      </div>
-                      
-                      <div className="bg-white rounded-2xl border overflow-hidden">
-                        <ReactQuill theme="snow" value={statement} onChange={setStatement} modules={modules} className="h-[600px] mb-12"/>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="min-h-[600px] flex flex-col items-center justify-center bg-blue-50 rounded-3xl border-2 border-dashed border-blue-200 p-8 text-center animate-in fade-in duration-500">
-                        <h3 className="text-2xl font-black text-slate-700 mb-4">১৬১ জবানবন্দি প্রস্তুত করুন</h3>
-                        
-                        <div className="flex bg-white rounded-xl shadow-sm border p-1 mb-6">
-                            <button onClick={() => setSourceType("auto")} className={`px-4 py-2 text-sm font-bold rounded-lg transition ${sourceType === 'auto' ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}>অটো-জেনারেট করা রিপোর্ট থেকে</button>
-                            <button onClick={() => setSourceType("paste")} className={`px-4 py-2 text-sm font-bold rounded-lg transition ${sourceType === 'paste' ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}>ফাইনাল রিপোর্ট পেস্ট করুন</button>
-                        </div>
-
-                        {sourceType === "paste" && (
-                            <textarea 
-                                value={pastedReportText}
-                                onChange={e => setPastedReportText(e.target.value)} 
-                                className="w-full max-w-2xl border p-4 rounded-xl h-40 mb-4 text-sm bg-white focus:ring-2 ring-blue-500 outline-none shadow-sm" 
-                                placeholder="MS Word থেকে আপনার এডিট করা চূড়ান্ত তদন্ত প্রতিবেদনটি (বিশেষ করে ১৫ ও ১৬ নং পয়েন্ট) কপি করে এখানে পেস্ট করুন..."
-                            ></textarea>
-                        )}
-
-                        <textarea 
-                            value={note161}
-                            onChange={e => setNote161(e.target.value)} 
-                            className="w-full max-w-2xl border p-4 rounded-xl h-24 mb-6 text-sm bg-white focus:ring-2 ring-purple-500 outline-none shadow-sm" 
-                            placeholder="১৬১ এর জন্য বিশেষ আইও নোট (যেমন: কোন সাক্ষীর জবানবন্দি নিতে চান, সে কী বলেছে ইত্যাদি...)"
-                        ></textarea>
-
-                        <button onClick={handleGenerate161} disabled={loading161} className="bg-purple-600 hover:bg-purple-700 text-white px-10 py-4 rounded-2xl font-bold text-lg shadow-xl transition transform hover:scale-105 active:scale-95 flex items-center gap-2">{loading161 ? "তৈরি হচ্ছে..." : `⚡ ১৬১ তৈরি করুন (৳${COST_161})`}</button>
-                    </div>
-                  )
-               )}
-
             </div>
           </div>
         ) : (
