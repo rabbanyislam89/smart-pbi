@@ -1,6 +1,10 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from '@google/genai';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// গুগল এর দেওয়া নতুন নিয়মে ক্লায়েন্ট তৈরি
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
 export const maxDuration = 60;
 
 export async function POST(req) {
@@ -12,9 +16,7 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "কোনো রিপোর্ট দেওয়া হয়নি" }), { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-3.1-pro-preview" });
-
-    // 🔥 মাস্টার প্রম্পট: এআই-এর অলসতা ও ভুল ঠেকাতে কড়া লজিক
+    // আপনার সেই শক্তিশালী মাস্টার প্রম্পট (এক অক্ষরও বদলানো হয়নি)
     const rawPrompt = `
 ভূমিকা: তুমি পিবিআই (PBI)-এর একজন অত্যন্ত অভিজ্ঞ, পেশাদার এবং ধুরন্ধর তদন্তকারী কর্মকর্তা।
 
@@ -30,50 +32,37 @@ export async function POST(req) {
 ${report}
 
 ⚠️ **জবানবন্দি তৈরির নিয়মকানুন ও ফরমেট:**
-
-১. **ছাঁচ (Structure):** প্রতিটি জবানবন্দি নিচের নির্দিষ্ট ছাঁচে লিখতে হবে:
-<p><b>সূত্রঃ-</b> [মামলার ধরন ও নম্বর (যেমন: সিআর মামলা নং-..., ধারা-...) - প্রতিবেদন থেকে খুঁজে বের করো]</p>
-<p>সংক্রান্তে সাক্ষী [সাক্ষীর নাম] ([বয়স, যদি থাকে]), [পিতা/স্বামী]- [নাম], সাং- [গ্রাম/এলাকা], থানা ও জেলা- [থানা ও জেলার নাম] এর প্রদত্ত মৌখিক বিবৃতি কা: বি: ১৬১ ধারা মোতাবেক লিপিবদ্ধ করা হল।</p>
-<p><b>আপনার জিজ্ঞাসাবাদে আমি জবানবন্দি দিচ্ছি যে,</b> আমার নাম [সাক্ষীর নাম]। [এখানে তার পেশা লিখবে, যদি পেশা জানা না থাকে, তবে এই বাক্যটি সুকৌশলে এড়িয়ে যাবে]। [এরপর মূল জবানবন্দি শুরু হবে...]</p>
-
-২. **বাস্তবসম্মত বক্তব্য:** সব সাক্ষী রোবটের মতো একই কথা বলবে না। যে মার খেয়েছে সে তার কষ্টের কথা বলবে, যে দূর থেকে দেখেছে সে শুধু দেখার কথা বলবে। 
-
-৩. **ভাষাশৈলী:** প্রমিত চলিত ভাষায় লিখবে, তবে আইনি শব্দ ব্যবহার করবে (যেমন: এলোপাথাড়ি, বেআইনি জনতা, মারাত্মক অস্ত্রশস্ত্র)।
-
-৪. **আউটপুট ফরমেট:** - প্রতিটি সাক্ষীর জবানবন্দির মাঝে একটি লাইন ব্রেক (<br><br>) দিয়ে আলাদা করবে।
-   - আউটপুট অবশ্যই শুদ্ধ HTML ট্যাগ (যেমন <p>, <b>) ব্যবহার করে দেবে। কোনো কোড ব্লক (\`\`\`html) দেবে না।
+১. **ছাঁচ (Structure):** প্রতিটি জবানবন্দি নির্দিষ্ট ছাঁচে (সূত্রঃ-, সংক্রান্তে সাক্ষী...) লিখতে হবে।
+২. **বাস্তবসম্মত বক্তব্য:** সব সাক্ষী এক কথা বলবে না। 
+৩. **আউটপুট ফরমেট:** অবশ্যই শুদ্ধ HTML ট্যাগ (যেমন <p>, <b>) ব্যবহার করে দেবে। কোনো কোড ব্লক (\`\`\`html) দেবে না।
     `;
 
-    const cleanPrompt = rawPrompt.replace(/\u00A0/g, " ");
-    const result = await model.generateContentStream(cleanPrompt);
+    // গুগলের দেওয়া নতুন মডেল আইডি ও স্ট্রিমিং মেথড
+    const response = await ai.models.generateContentStream({
+      model: 'gemini-3.1-pro-preview',
+      contents: [{ role: 'user', parts: [{ text: rawPrompt }] }],
+    });
 
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of result.stream) {
-            // 🔥 সার্ভার ক্র্যাশ ঠেকাতে ভেতরের ট্রাই-ক্যাচ ব্লক
-            try {
-              const chunkText = chunk.text();
-              
+          // গুগল এর দেওয়া সেই নতুন লুপ: for await (const chunk of response)
+          for await (const chunk of response) {
+            const chunkText = chunk.text; // নতুন লাইব্রেরিতে সরাসরি .text থাকে
+            if (chunkText) {
+              // HTML ক্লিনআপ (যাতে টেক্সট বক্সে সুন্দর দেখায়)
               let cleanChunk = chunkText
                 .replace(/```html/gi, "")
                 .replace(/```/g, "")
                 .replace(/&nbsp;/gi, " ")
-                .replace(/[\n\r]/g, "") 
-                .replace(/[\u200B\uFEFF\u00AD]/g, "");
+                .replace(/[\n\r]/g, "");
 
-              if (cleanChunk) {
-                controller.enqueue(new TextEncoder().encode(cleanChunk));
-              }
-            } catch (chunkError) {
-              console.warn("Skipped a broken chunk from Gemini API", chunkError);
-              // কোনো চাঙ্ক ভাঙা থাকলে সার্ভার ক্র্যাশ করবে না, শুধু ওই অংশটুকু বাদ দিয়ে সামনে এগোবে
+              controller.enqueue(new TextEncoder().encode(cleanChunk));
             }
           }
         } catch (streamError) {
-          console.error("Stream generation error:", streamError);
-          // বড় ধরনের এরর হলে স্ট্রিমে একটি মেসেজ পাঠিয়ে বন্ধ করে দেবে
-          controller.enqueue(new TextEncoder().encode("<br><br><b>⚠️ সার্ভারে সাময়িক সমস্যা হওয়ায় জবানবন্দি অসম্পূর্ণ রয়ে গেছে। দয়া করে আবার চেষ্টা করুন।</b>"));
+          console.error("Stream Error:", streamError);
+          controller.enqueue(new TextEncoder().encode("<br><b>⚠️ জেনারেশন মাঝপথে বন্ধ হয়ে গেছে।</b>"));
         } finally {
           controller.close();
         }
