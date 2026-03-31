@@ -113,6 +113,15 @@ export default function Statement161Page() {
           const dateStr = new Date().toLocaleDateString('bn-BD');
           const extractedFileName = `১৬১ জবানবন্দি - ${dateStr}`;
 
+          // 👇 নতুন কোড: ২০টার বেশি হলে পুরনো রেকর্ড অটো-ডিলিট হবে 👇
+          if (history.length >= 20) {
+            const itemsToDelete = history.slice(19); 
+            for (let oldItem of itemsToDelete) {
+                await deleteDoc(doc(db, "reports", oldItem.id));
+            }
+          }
+          // 👆 নতুন কোড এখানে শেষ 👆
+
           const docRef = await addDoc(collection(db, "reports"), {
             userId: user.uid, note: note161, report: finalStatement, fileName: extractedFileName, type: '161', createdAt: new Date()
           });
@@ -251,11 +260,32 @@ export default function Statement161Page() {
                  <span className="text-sm font-black text-white bg-purple-600 px-3 py-1 rounded-full shadow">চার্জ: ৳{COST_161}</span>
                </div>
                
-               <label className="block text-sm font-bold text-slate-700 mb-2">১. আপনার তৈরি করা মূল রিপোর্ট পেস্ট করুন:</label>
+               <label className="block text-sm font-bold text-slate-700 mb-2">১. আপনার  মূল রিপোর্ট সম্পূর্ণটি ইউনিকোডে শুধু  পেস্ট করুন:</label>
                <textarea value={pastedReportText} onChange={e => setPastedReportText(e.target.value)} className="w-full border-2 border-slate-200 p-4 rounded-2xl h-48 mb-6 text-sm bg-slate-50 focus:bg-white focus:border-purple-500 outline-none transition" placeholder="এখানে মূল রিপোর্টটি পেস্ট করুন..."></textarea>
                
-               <label className="block text-sm font-bold text-slate-700 mb-2">২. অফিসারের স্পেশাল নোট (ঐচ্ছিক):</label>
-               <textarea value={note161} onChange={e => setNote161(e.target.value)} className="w-full border-2 border-slate-200 p-4 rounded-2xl h-24 mb-8 text-sm bg-slate-50 focus:bg-white focus:border-purple-500 outline-none transition" placeholder="যেমন: ১ ও ২ নং সাক্ষীর জবানবন্দি আলাদা করে লেখো..."></textarea>
+               
+               {/* 👇 নতুন কোড এখান থেকে শুরু 👇 */}
+<div className="mb-8">
+  <label className="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+    🗣️ সাক্ষীদের জন্য বিশেষ নোট (ঐচ্ছিক)
+  </label>
+  <textarea 
+    value={note161}
+    onChange={e => setNote161(e.target.value)} 
+    className="w-full border border-purple-200 p-4 rounded-2xl h-28 text-sm bg-slate-50 focus:ring-2 ring-purple-500 outline-none resize-none shadow-inner" 
+    placeholder="কোনো সাক্ষীর বক্তব্যে বিশেষ কিছু যোগ করতে চাইলে এখানে লিখতে পারেন যেমন-সাক্ষীর পেশা..."
+  ></textarea>
+  
+  <div className="bg-purple-50 border border-purple-100 p-3 rounded-xl mt-2">
+    <p className="text-[12px] text-slate-700 font-bold flex items-start gap-2 leading-relaxed">
+      <span className="text-purple-600 text-base mt-[1px]">💡</span> 
+      <span>
+        <span className="text-purple-700">টিপস:</span> আপনি চাইলে নির্দিষ্ট করে বলে দিতে পারেন কোন সাক্ষী কী দেখেছে। যেমন: <span className="text-purple-600 italic">"১নং সাক্ষী শুধু লাঠি দিয়ে মারতে দেখেছে"</span> অথবা <span className="text-purple-600 italic">"২নং সাক্ষী দূরে ছিল, শুধু চিৎকার শুনেছে।"</span> প্রতিবেদনের সাথে মিল রেখে বানাতে চাইলে বানাতে চাইলে বক্স ফাঁকা রাখুন।
+      </span>
+    </p>
+  </div>
+</div>
+{/* 👆 নতুন কোড এখানে শেষ 👆 */}
                
                <button onClick={handleGenerate161} disabled={loading161} className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-4 rounded-2xl font-black text-lg shadow-xl transition transform active:scale-95 flex justify-center items-center gap-2">
                  {loading161 ? <span className="animate-pulse">তৈরি হচ্ছে...</span> : `⚡ ১৬১ তৈরি করুন (৳${COST_161})`}

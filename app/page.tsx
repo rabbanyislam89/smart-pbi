@@ -623,8 +623,37 @@ export default function Home() {
                  <h3 className="font-black text-slate-800">নতুন মামলা</h3>
                  <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded border border-red-100">চার্জ: ৳{COST_REPORT}</span>
                </div>
-               <textarea onChange={e => setNote(e.target.value)} className="w-full border p-4 rounded-2xl h-24 mb-6 text-sm bg-slate-50 focus:ring-2 ring-blue-500 outline-none" placeholder="অফিসারের নোট..."></textarea>
-               <input type="file" accept=".pdf" onChange={(e: any) => setFile(e.target.files[0])} className="w-full text-xs mb-8 p-4 bg-blue-50 rounded-2xl border border-dashed border-blue-200 cursor-pointer"/>
+               <div className="mb-6">
+  <label className="block text-sm font-black text-slate-700 mb-2 flex items-center gap-2">
+    📝 অফিসারের নোট (IO Note)
+  </label>
+  <textarea 
+    onChange={e => setNote(e.target.value)} 
+    className="w-full border border-blue-200 p-4 rounded-2xl h-28 text-sm bg-slate-50 focus:ring-2 ring-blue-500 outline-none resize-none shadow-inner" 
+    placeholder="তদন্তে যা যা পেয়েছেন তা বিস্তারিত এখানে লিখুন..."
+  ></textarea>
+  
+  <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl mt-2">
+    <p className="text-[12px] text-slate-700 font-bold flex items-start gap-2 leading-relaxed">
+      <span className="text-blue-600 text-base mt-[1px]">💡</span> 
+      <span>
+        <span className="text-blue-700">টিপস:</span> এজাহারের বাইরে তদন্তে নতুন কী পেয়েছেন, কার বিরুদ্ধে কী অপরাধ প্রমাণিত হয়েছে এবং এজাহারের কোন কোন অভিযোগ প্রমাণিত হয়নি—তা এখানে বিস্তারিত লিখুন। কোনো সাক্ষীর নাম বাদ দিতে বা নতুন যোগ করতে চাইলে সেটিও উল্লেখ করুন।
+      </span>
+    </p>
+  </div>
+</div>
+               <div className="mb-6">
+  <input 
+    type="file" 
+    accept=".pdf" 
+    onChange={(e: any) => setFile(e.target.files[0])} 
+    className="w-full text-sm p-3 bg-blue-50 rounded-2xl border-2 border-dashed border-blue-300 cursor-pointer hover:bg-blue-100 transition file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+  />
+  <p className="text-[11px] text-slate-500 mt-2 font-bold flex items-center gap-1 leading-tight">
+    <span className="text-blue-500 text-sm">💡</span> 
+    আপনার মামলার সব ডকুমেন্ট একত্রে পিডিএফ (PDF) আকারে আপলোড করুন। ফাইলের সাইজ ৩ এমবি (3MB) এর নিচে রাখুন।
+  </p>
+</div>
                <button onClick={handleGenerateReport} disabled={loadingReport} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black shadow-xl transition active:scale-95">{loadingReport ? "তৈরি হচ্ছে..." : `রিপোর্ট তৈরি করুন (৳${COST_REPORT})`}</button>
             </div>
 
