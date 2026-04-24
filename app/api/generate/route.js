@@ -22,7 +22,7 @@ export async function POST(req) {
     const base64Data = buffer.toString("base64");
 
     // ৩.১ প্রো মডেলের অফিসিয়াল আইডি
-    const modelId = "gemini-3.1-pro-preview";
+    const modelId = "gemini-2.5-pro";
     
     // =========================================================================
     // 🔥 FULL MASTER PROMPT (হুবহু অপরিবর্তিত রাখা হয়েছে)
