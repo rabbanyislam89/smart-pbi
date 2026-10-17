@@ -51,7 +51,7 @@ ${report}
 
     // গুগলের দেওয়া নতুন মডেল আইডি ও স্ট্রিমিং মেথড
     const response = await ai.models.generateContentStream({
-      model: 'gemini-2.5-pro',
+      model: 'gemini-3.8-flash',
       contents: [{ role: 'user', parts: [{ text: rawPrompt }] }],
     });
 
